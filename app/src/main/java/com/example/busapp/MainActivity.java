@@ -1,12 +1,19 @@
 package com.example.busapp;
 
+import static android.content.ContentValues.TAG;
+
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
+import android.content.DialogInterface;
+import android.content.Intent;
+import android.content.IntentSender;
 import android.content.pm.PackageManager;
 import android.location.Location;
+import android.net.Uri;
 import android.os.Bundle;
+import android.provider.Settings;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
@@ -17,12 +24,20 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
 
+
 import com.example.busapp.databinding.ActivityMainBinding;
+import com.google.android.gms.common.api.ApiException;
+import com.google.android.gms.common.api.ResolvableApiException;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.location.LocationCallback;
 import com.google.android.gms.location.LocationRequest;
+import com.google.android.gms.location.LocationSettingsRequest;
+import com.google.android.gms.location.LocationSettingsResponse;
+import com.google.android.gms.location.LocationSettingsStatusCodes;
+import com.google.android.gms.location.SettingsClient;
+import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 
 import org.xmlpull.v1.XmlPullParser;
@@ -45,12 +60,14 @@ public class MainActivity extends Activity {
     private Button button;
     private FusedLocationProviderClient mFusedLocationClient;
     private LocationRequest locationRequest;
-    private LocationCallback locationCallback;
     private int locationRequestCode = 1000;
-    private double wayLatitude = 0.0, wayLongitude = 0.0;
+    private double wayLatitude, wayLongitude;
     private StringBuilder stringBuilder;
     private boolean isContinue = false;
 
+    public static final int DEFAULT_LOCATION_REQUEST_PRIORITY = LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY;
+    public static final long DEFAULT_LOCATION_REQUEST_INTERVAL = 20000L;
+    public static final long DEFAULT_LOCATION_REQUEST_FAST_INTERVAL = 10000L;
     private TagoThread tagoThread;
 
     @Override
@@ -64,38 +81,8 @@ public class MainActivity extends Activity {
         this.buslist = (TextView) findViewById(R.id.buslist);
         this.txtLocation = (TextView) findViewById(R.id.txtLocation);
         this.button = (Button) findViewById(R.id.button);
-        mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
 
-        locationRequest = LocationRequest.create();
-        locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
-        locationRequest.setInterval(20 * 1000);
 
-        locationCallback = new LocationCallback() {
-            @Override
-            public void onLocationResult(LocationResult locationResult) {
-                if (locationResult == null) {
-                    return;
-                }
-                for (Location location : locationResult.getLocations()) {
-                    if (location != null) {
-                        wayLatitude = location.getLatitude();
-                        wayLongitude = location.getLongitude();
-                        if (!isContinue) {
-                            txtLocation.setText(String.format(Locale.US, "%s - %s", wayLatitude, wayLongitude));
-                        } else {
-                            stringBuilder.append(wayLatitude);
-                            stringBuilder.append("-");
-                            stringBuilder.append(wayLongitude);
-                            stringBuilder.append("\n\n");
-                            txtLocation.setText(stringBuilder.toString());
-                        }
-                        if (!isContinue && mFusedLocationClient != null) {
-                            mFusedLocationClient.removeLocationUpdates(locationCallback);
-                        }
-                    }
-                }
-            }
-        };
 
 //        button.setOnClickListener(view -> {
 //            isContinue = true;
@@ -109,9 +96,9 @@ public class MainActivity extends Activity {
             public void onClick(View view) {
 //                tagoThread = new TagoThread();
 //                tagoThread.start();
-                getLocation();
-                data = getTagoXmlData(wayLatitude, wayLatitude);
-                buslist.setText(data);
+                checkLocationPermission();
+//                data = getTagoXmlData(wayLatitude, wayLatitude);
+//                buslist.setText(data);
 //                new Thread(new Runnable() {
 //                    @Override
 //                    public void run() {
@@ -130,26 +117,15 @@ public class MainActivity extends Activity {
 
     }//onCreate
 
-    private void getLocation() {
+
+    private void checkLocationPermission(){
+        //권한이 없는 경우
         if (ActivityCompat.checkSelfPermission(MainActivity.this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
                 && ActivityCompat.checkSelfPermission(MainActivity.this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(MainActivity.this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION},
                     locationRequestCode);
-
-        } else {
-            if (isContinue) {
-                mFusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, null);
-            } else {
-                mFusedLocationClient.getLastLocation().addOnSuccessListener(MainActivity.this, location -> {
-                    if (location != null) {
-                        wayLatitude = location.getLatitude();
-                        wayLongitude = location.getLongitude();
-                        txtLocation.setText(String.format(Locale.US, "%s - %s", wayLatitude, wayLongitude));
-                    } else {
-                        mFusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, null);
-                    }
-                });
-            }
+        } else {    //이미 권한이 있는 경우
+            checkLocationSetting();
         }
     }
 
@@ -162,33 +138,96 @@ public class MainActivity extends Activity {
                 // If request is cancelled, the result arrays are empty.
                 if (grantResults.length > 0
                         && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    if (isContinue) {
-                        mFusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, null);
-                    } else {
-                        mFusedLocationClient.getLastLocation().addOnSuccessListener(MainActivity.this, location -> {
-                            if (location != null) {
-                                wayLatitude = location.getLatitude();
-                                wayLongitude = location.getLongitude();
-                                txtLocation.setText(String.format(Locale.US, "%s - %s", wayLatitude, wayLongitude));
-                            } else {
-                                mFusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, null);
-                            }
-                        });
-                    }
-                } else {
-                    Toast.makeText(this, "Permission denied", Toast.LENGTH_SHORT).show();
+                    checkLocationSetting();
                 }
+//                else {
+//                    androidx.appcompat.app.AlertDialog.Builder builder = new androidx.appcompat.app.AlertDialog.Builder(MainActivity.this);
+//                    builder.setTitle("위치 권한이 꺼져있습니다.");
+//                    builder.setMessage("[권한] 설정에서 위치 권한을 허용해야 합니다.");
+//                    builder.setPositiveButton("설정으로 가기", new DialogInterface.OnClickListener() {
+//                        @Override
+//                        public void onClick(DialogInterface dialog, int which) {
+//                            Intent intent = new Intent();
+//                            intent.setAction(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+//                            Uri uri = Uri.fromParts("package", getPackageName(), null);
+//                            intent.setData(uri);
+//                            startActivity(intent);
+//                        }
+//                    }).setNegativeButton("종료", new DialogInterface.OnClickListener() {
+//                        @Override
+//                        public void onClick(DialogInterface dialog, int which) {
+//                            finish();
+//                        }
+//                    });
+//                    androidx.appcompat.app.AlertDialog alert = builder.create();
+//                    alert.show();
+//                }
                 break;
             }
         }
     }
 
+    private  void checkLocationSetting(){
+        locationRequest = LocationRequest.create();
+        locationRequest.setPriority(DEFAULT_LOCATION_REQUEST_PRIORITY);
+        locationRequest.setInterval(DEFAULT_LOCATION_REQUEST_INTERVAL);
+        locationRequest.setFastestInterval(DEFAULT_LOCATION_REQUEST_FAST_INTERVAL);
+
+        SettingsClient settingsClient = LocationServices.getSettingsClient(this);
+        LocationSettingsRequest.Builder builder = new LocationSettingsRequest.Builder().addLocationRequest(locationRequest).setAlwaysShow(true);
+        settingsClient.checkLocationSettings(builder.build())
+                .addOnSuccessListener(this, new OnSuccessListener<LocationSettingsResponse>() {
+                    @SuppressLint("MissingPermission")
+                    @Override
+                    public void onSuccess(LocationSettingsResponse locationSettingsResponse) {
+                        mFusedLocationClient = LocationServices.getFusedLocationProviderClient(MainActivity.this);
+                        mFusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, null);
+                    }
+                })
+                .addOnFailureListener(this, new OnFailureListener() {
+                    @Override
+                    public void onFailure(@NonNull Exception e) {
+                        int statusCode = ((ApiException) e).getStatusCode();
+                        switch (statusCode) {
+                            case LocationSettingsStatusCodes.RESOLUTION_REQUIRED:
+                                try {
+                                    ResolvableApiException rae = (ResolvableApiException) e;
+                                    rae.startResolutionForResult(MainActivity.this, 101);
+                                } catch (IntentSender.SendIntentException sie) {
+                                    Log.w(TAG, "unable to start resolution for result due to " + sie.getLocalizedMessage());
+                                }
+                                break;
+                            case LocationSettingsStatusCodes.SETTINGS_CHANGE_UNAVAILABLE:
+                                String errorMessage = "location settings are inadequate, and cannot be fixed here. Fix in Settings.";
+                                Log.e(TAG, errorMessage);
+                        }
+                    }
+                });
+    }
+
+    private LocationCallback locationCallback = new LocationCallback() {
+        @Override
+        public void onLocationResult(LocationResult locationResult) {
+            super.onLocationResult(locationResult);
+            wayLatitude = locationResult.getLastLocation().getLatitude();
+            wayLongitude = locationResult.getLastLocation().getLongitude();
+            mFusedLocationClient.removeLocationUpdates(locationCallback);
+            Intent intent = new Intent(MainActivity.this,BusListActivity.class);
+            intent.putExtra("lat",wayLatitude);
+            intent.putExtra("lon",wayLongitude);
+            startActivity(intent);
+            finish();
+
+        }
+    };
+
+
     public String getTagoXmlData(double lat, double lon) {
-        String lat_str = Double.toString(lat);
-        String lon_str = Double.toString(lon);
+        String lat_str = String.valueOf(lat);
+        String lon_str = String.valueOf(lon);
         StringBuffer buffer = new StringBuffer();
         Context context = getApplicationContext();
-        Toast.makeText(context,lat_str +" "+lon_str,Toast.LENGTH_LONG).show();
+        Toast.makeText(context, lat_str + " " + lon_str, Toast.LENGTH_LONG).show();
         Thread t = new Thread(() -> {
 
             String queryUrl = "http://apis.data.go.kr/1613000/BusSttnInfoInqireService/getCrdntPrxmtSttnList?serviceKey="
@@ -268,5 +307,6 @@ public class MainActivity extends Activity {
         return buffer.toString();//StringBuffer 문자열 객체 반환
     }
 }
+
 
 
