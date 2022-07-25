@@ -4,6 +4,7 @@ import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.location.Location;
 import android.os.Bundle;
@@ -45,12 +46,12 @@ public class MainActivity extends Activity {
     private Button button;
     private FusedLocationProviderClient mFusedLocationClient;
     private LocationRequest locationRequest;
-    private LocationCallback locationCallback;
     private int locationRequestCode = 1000;
     private double wayLatitude = 0.0, wayLongitude = 0.0;
-    private StringBuilder stringBuilder;
     private boolean isContinue = false;
-
+    public static final int DEFAULT_LOCATION_REQUEST_PRIORITY = LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY;
+    public static final long DEFAULT_LOCATION_REQUEST_INTERVAL = 20000L;
+    public static final long DEFAULT_LOCATION_REQUEST_FAST_INTERVAL = 10000L;
     private TagoThread tagoThread;
 
     @Override
@@ -59,83 +60,50 @@ public class MainActivity extends Activity {
 
         binding = ActivityMainBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
-
+        //setContentView(R.layout.activity_main);
 
         this.buslist = (TextView) findViewById(R.id.buslist);
         this.txtLocation = (TextView) findViewById(R.id.txtLocation);
         this.button = (Button) findViewById(R.id.button);
         mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
 
-        locationRequest = LocationRequest.create();
-        locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
-        locationRequest.setInterval(20 * 1000);
+        getLocation();
 
-        locationCallback = new LocationCallback() {
-            @Override
-            public void onLocationResult(LocationResult locationResult) {
-                if (locationResult == null) {
-                    return;
-                }
-                for (Location location : locationResult.getLocations()) {
-                    if (location != null) {
-                        wayLatitude = location.getLatitude();
-                        wayLongitude = location.getLongitude();
-                        if (!isContinue) {
-                            txtLocation.setText(String.format(Locale.US, "%s - %s", wayLatitude, wayLongitude));
-                        } else {
-                            stringBuilder.append(wayLatitude);
-                            stringBuilder.append("-");
-                            stringBuilder.append(wayLongitude);
-                            stringBuilder.append("\n\n");
-                            txtLocation.setText(stringBuilder.toString());
-                        }
-                        if (!isContinue && mFusedLocationClient != null) {
-                            mFusedLocationClient.removeLocationUpdates(locationCallback);
-                        }
-                    }
-                }
-            }
-        };
-
-//        button.setOnClickListener(view -> {
-//            isContinue = true;
-//            stringBuilder = new StringBuilder();
-//            getLocation();
-//            data = getTagoXmlData(wayLatitude,wayLongitude);
-//            buslist.setText(data);
-//        });
         button.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-//                tagoThread = new TagoThread();
-//                tagoThread.start();
-                getLocation();
-                data = getTagoXmlData(wayLatitude, wayLatitude);
-                buslist.setText(data);
-//                new Thread(new Runnable() {
-//                    @Override
-//                    public void run() {
-//                        data = getTagoXmlData(wayLatitude,wayLongitude);
-//                        runOnUiThread(new Runnable() {
-//                            @Override
-//                            public void run() {
-//                                //buslist.setText("test");
-//                            }
-//                        });
-//                    }
-//                }).start();
+                //data = getTagoXmlData();
+                //buslist.setText(data);
+                txtLocation.setText(String.format("%s : %s", wayLatitude, wayLongitude));
+                Intent intent = new Intent(MainActivity.this,BusListActivity.class);
+                intent.putExtra("latitude", wayLatitude);
+                intent.putExtra("longitude", wayLongitude);
+                startActivity(intent);
             }
         });
-
-
     }//onCreate
 
+    private LocationCallback locationCallback = new LocationCallback() {
+        @Override
+        public void onLocationResult(@NonNull LocationResult locationResult) {
+            super.onLocationResult(locationResult);
+            wayLongitude = locationResult.getLastLocation().getLongitude();
+            wayLatitude = locationResult.getLastLocation().getLatitude();
+            mFusedLocationClient.removeLocationUpdates(locationCallback);
+        }
+    };
+
+
+
     private void getLocation() {
+        locationRequest = LocationRequest.create();
+        locationRequest.setPriority(DEFAULT_LOCATION_REQUEST_PRIORITY);
+        locationRequest.setInterval(DEFAULT_LOCATION_REQUEST_INTERVAL);
+        locationRequest.setFastestInterval(DEFAULT_LOCATION_REQUEST_FAST_INTERVAL);
         if (ActivityCompat.checkSelfPermission(MainActivity.this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
                 && ActivityCompat.checkSelfPermission(MainActivity.this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(MainActivity.this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION},
                     locationRequestCode);
-
         } else {
             if (isContinue) {
                 mFusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, null);
@@ -144,7 +112,11 @@ public class MainActivity extends Activity {
                     if (location != null) {
                         wayLatitude = location.getLatitude();
                         wayLongitude = location.getLongitude();
-                        txtLocation.setText(String.format(Locale.US, "%s - %s", wayLatitude, wayLongitude));
+//                        txtLocation.setText(String.format("%s : %s", wayLatitude, wayLongitude));
+//                        Intent intent = new Intent(getApplicationContext(),BusListActivity.class);
+//                        intent.putExtra("latitude", wayLatitude);
+//                        intent.putExtra("longitude", wayLongitude);
+//                        startActivity(intent);
                     } else {
                         mFusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, null);
                     }
@@ -169,7 +141,7 @@ public class MainActivity extends Activity {
                             if (location != null) {
                                 wayLatitude = location.getLatitude();
                                 wayLongitude = location.getLongitude();
-                                txtLocation.setText(String.format(Locale.US, "%s - %s", wayLatitude, wayLongitude));
+                                txtLocation.setText(String.format("%s - %s", wayLatitude, wayLongitude));
                             } else {
                                 mFusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, null);
                             }
@@ -183,9 +155,10 @@ public class MainActivity extends Activity {
         }
     }
 
-    public String getTagoXmlData(double lat, double lon) {
-        String lat_str = Double.toString(lat);
-        String lon_str = Double.toString(lon);
+    public String getTagoXmlData() {
+        //getLocation();
+        String lat_str = Double.toString(wayLatitude);
+        String lon_str = Double.toString(wayLongitude);
         StringBuffer buffer = new StringBuffer();
         Context context = getApplicationContext();
         Toast.makeText(context,lat_str +" "+lon_str,Toast.LENGTH_LONG).show();
