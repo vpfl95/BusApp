@@ -1,5 +1,7 @@
 package com.example.busapp;
 
+import android.os.Message;
+import android.util.Log;
 import android.widget.EditText;
 
 import org.xmlpull.v1.XmlPullParser;
@@ -13,10 +15,21 @@ import java.net.URL;
 import java.net.URLEncoder;
 
 public class TagoThread extends Thread{
-    private EditText edit;
+    private double lat;
+    private double lon;
+    private String data;
+
+    public TagoThread(double lat, double lon){
+        this.lat = lat;
+        this.lon = lon;
+    }
+    public String getData(){
+        return data;
+    }
     @Override
     public void run(){
-        getTagoXmlData();
+        data = getTagoXmlData(lat, lon);
+        Log.d("Thread",data);
     }
 
     public String getTagoXmlData(double lat, double lon){
