@@ -24,6 +24,7 @@ import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.location.LocationCallback;
 import com.google.android.gms.location.LocationRequest;
+import com.google.android.gms.location.Priority;
 import com.google.android.gms.tasks.OnSuccessListener;
 
 import org.xmlpull.v1.XmlPullParser;
@@ -44,14 +45,15 @@ public class MainActivity extends Activity {
     private TextView buslist;
     private TextView txtLocation;
     private Button button;
+
     private FusedLocationProviderClient mFusedLocationClient;
     private LocationRequest locationRequest;
     private int locationRequestCode = 1000;
     private double wayLatitude = 0.0, wayLongitude = 0.0;
     private boolean isContinue = false;
     public static final int DEFAULT_LOCATION_REQUEST_PRIORITY = LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY;
-    public static final long DEFAULT_LOCATION_REQUEST_INTERVAL = 20000L;
-    public static final long DEFAULT_LOCATION_REQUEST_FAST_INTERVAL = 10000L;
+    public static final long DEFAULT_LOCATION_REQUEST_INTERVAL = 20000L;      //20초 사이
+    public static final long DEFAULT_LOCATION_REQUEST_FAST_INTERVAL = 10000L; //10초에서
     private TagoThread tagoThread;
 
     @Override
@@ -60,20 +62,20 @@ public class MainActivity extends Activity {
 
         binding = ActivityMainBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
-        //setContentView(R.layout.activity_main);
 
         this.buslist = (TextView) findViewById(R.id.buslist);
         this.txtLocation = (TextView) findViewById(R.id.txtLocation);
         this.button = (Button) findViewById(R.id.button);
-        mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
+
+        mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this); //위치 정보를 제공하는 클라이언트 객체
 
         getLocation();
 
         button.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                //data = getTagoXmlData();
-                //buslist.setText(data);
+                data = getTagoXmlData();
+                buslist.setText(data);
                 txtLocation.setText(String.format("%s : %s", wayLatitude, wayLongitude));
                 Intent intent = new Intent(MainActivity.this,BusListActivity.class);
                 intent.putExtra("latitude", wayLatitude);
@@ -89,34 +91,32 @@ public class MainActivity extends Activity {
             super.onLocationResult(locationResult);
             wayLongitude = locationResult.getLastLocation().getLongitude();
             wayLatitude = locationResult.getLastLocation().getLatitude();
-            mFusedLocationClient.removeLocationUpdates(locationCallback);
+            mFusedLocationClient.removeLocationUpdates(locationCallback); //결과 전달 되면 리스너 삭제
         }
     };
 
 
 
     private void getLocation() {
-        locationRequest = LocationRequest.create();
-        locationRequest.setPriority(DEFAULT_LOCATION_REQUEST_PRIORITY);
-        locationRequest.setInterval(DEFAULT_LOCATION_REQUEST_INTERVAL);
-        locationRequest.setFastestInterval(DEFAULT_LOCATION_REQUEST_FAST_INTERVAL);
+        locationRequest = LocationRequest.create(); //location에 필요한 정보를 정의 하는 객체 생성
+        locationRequest.setPriority(DEFAULT_LOCATION_REQUEST_PRIORITY);//위치 정밀도 설정
+        locationRequest.setInterval(DEFAULT_LOCATION_REQUEST_INTERVAL); //위치 업데이트 시간 간격을 밀리초 단위로 설정
+        locationRequest.setFastestInterval(DEFAULT_LOCATION_REQUEST_FAST_INTERVAL);//위치 업데이트를 
+        //앱에 위치 권한이 있는 없는 경우
         if (ActivityCompat.checkSelfPermission(MainActivity.this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
                 && ActivityCompat.checkSelfPermission(MainActivity.this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+
             ActivityCompat.requestPermissions(MainActivity.this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION},
-                    locationRequestCode);
-        } else {
+                    locationRequestCode);//권한 요청
+
+        } else {    //앱에 위치 권한이 있는 경우
             if (isContinue) {
-                mFusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, null);
+                mFusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, null); //리퀘스트객체를 전달하고 그 결과를 전달 받을 콜백 함수
             } else {
                 mFusedLocationClient.getLastLocation().addOnSuccessListener(MainActivity.this, location -> {
                     if (location != null) {
                         wayLatitude = location.getLatitude();
                         wayLongitude = location.getLongitude();
-//                        txtLocation.setText(String.format("%s : %s", wayLatitude, wayLongitude));
-//                        Intent intent = new Intent(getApplicationContext(),BusListActivity.class);
-//                        intent.putExtra("latitude", wayLatitude);
-//                        intent.putExtra("longitude", wayLongitude);
-//                        startActivity(intent);
                     } else {
                         mFusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, null);
                     }
@@ -127,6 +127,8 @@ public class MainActivity extends Activity {
 
     @SuppressLint("MissingPermission")
     @Override
+    //requestPermissions에서 요청한 권한의 결과를 받는다.
+    //requestPermissions에서 requestCode를 전달해 연결한다.
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         switch (requestCode) {
@@ -156,7 +158,7 @@ public class MainActivity extends Activity {
     }
 
     public String getTagoXmlData() {
-        //getLocation();
+//        getLocation();
         String lat_str = Double.toString(wayLatitude);
         String lon_str = Double.toString(wayLongitude);
         StringBuffer buffer = new StringBuffer();
