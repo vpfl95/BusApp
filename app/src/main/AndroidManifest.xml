@@ -41,6 +41,11 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <activity android:name=".StopListActivity"
+            android:exported="true"
+            android:label="StopListActivity"/>
+
         <activity android:name=".BusListActivity"
             android:exported="true"
             android:label="@string/title_activity_bus_list"/>

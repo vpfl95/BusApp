@@ -16,7 +16,7 @@ public class TagoThread extends Thread{
     private EditText edit;
     @Override
     public void run(){
-        getTagoXmlData();
+        //getTagoXmlData();
     }
 
     public String getTagoXmlData(double lat, double lon){

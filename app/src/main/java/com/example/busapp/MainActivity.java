@@ -77,7 +77,7 @@ public class MainActivity extends Activity {
                 data = getTagoXmlData();
                 buslist.setText(data);
                 txtLocation.setText(String.format("%s : %s", wayLatitude, wayLongitude));
-                Intent intent = new Intent(MainActivity.this,BusListActivity.class);
+                Intent intent = new Intent(MainActivity.this,StopListActivity.class);
                 intent.putExtra("latitude", wayLatitude);
                 intent.putExtra("longitude", wayLongitude);
                 startActivity(intent);

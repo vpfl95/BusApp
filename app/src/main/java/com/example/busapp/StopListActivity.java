@@ -54,7 +54,6 @@ public class StopListActivity extends Activity {
         textView3.setText(data);
         //adapter = getTagoXmlData();
         //recyclerView.setAdapter(adapter);
-
     }
 
 
