@@ -95,8 +95,6 @@ public class MainActivity extends Activity {
         }
     };
 
-
-
     private void getLocation() {
         locationRequest = LocationRequest.create(); //location에 필요한 정보를 정의 하는 객체 생성
         locationRequest.setPriority(DEFAULT_LOCATION_REQUEST_PRIORITY);//위치 정밀도 설정

@@ -40,18 +40,24 @@ public class StopListActivity extends Activity {
         binding = ActivityStopListBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
         //mTextView = binding.text;
-        TextView textView3 = (TextView) findViewById(R.id.textView3);
-//        WearableRecyclerView recyclerView = findViewById(R.id.wearableRecyclerView);
-//        recyclerView.setHasFixedSize(true);
-//        recyclerView.setEdgeItemsCenteringEnabled(true);
-//        recyclerView.setLayoutManager(new WearableLinearLayoutManager(this));
 
+        WearableRecyclerView recyclerView = findViewById(R.id.recyclerView);
+        recyclerView.setHasFixedSize(true);
+        recyclerView.setEdgeItemsCenteringEnabled(true);
+        recyclerView.setLayoutManager(new WearableLinearLayoutManager(this));
+
+        StopAdapter adapter = new StopAdapter();
+        adapter.addItem(new BusStop("asdfsdf","aasdf231231"));
+        adapter.addItem(new BusStop("qwrqwer","qweqwe231"));
+        adapter.addItem(new BusStop("qwrqwer","qweqwe231"));
+        adapter.addItem(new BusStop("qwrqwer","qweqwe231"));
+        recyclerView.setAdapter(adapter);
         Intent intent =getIntent();
         latitude = intent.getDoubleExtra("latitude", 0);
         longitude = intent.getDoubleExtra("longitude", 0);
         data = getTagoXmlData();
         Log.d("data",data);
-        textView3.setText(data);
+
         //adapter = getTagoXmlData();
         //recyclerView.setAdapter(adapter);
     }
