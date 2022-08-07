@@ -54,7 +54,6 @@ public class MainActivity extends Activity {
     public static final int DEFAULT_LOCATION_REQUEST_PRIORITY = LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY;
     public static final long DEFAULT_LOCATION_REQUEST_INTERVAL = 20000L;      //20초 사이
     public static final long DEFAULT_LOCATION_REQUEST_FAST_INTERVAL = 10000L; //10초에서
-    private TagoThread tagoThread;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
