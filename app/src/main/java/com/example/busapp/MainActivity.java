@@ -8,6 +8,7 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.location.Location;
 import android.os.Bundle;
+import android.os.Handler;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
@@ -17,6 +18,8 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
+import androidx.wear.widget.WearableLinearLayoutManager;
+import androidx.wear.widget.WearableRecyclerView;
 
 import com.example.busapp.databinding.ActivityMainBinding;
 import com.google.android.gms.location.FusedLocationProviderClient;
@@ -34,6 +37,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.URL;
 import java.util.Locale;
+import java.util.StringTokenizer;
 
 public class MainActivity extends Activity {
 
@@ -41,10 +45,11 @@ public class MainActivity extends Activity {
     private ActivityMainBinding binding;
 
     private String data;
-    private EditText edit;
-    private TextView buslist;
     private TextView txtLocation;
     private Button button;
+    private StopAdapter adapter;
+    WearableRecyclerView recyclerView;
+    Handler handler = new Handler();
 
     private FusedLocationProviderClient mFusedLocationClient;
     private LocationRequest locationRequest;
@@ -62,7 +67,12 @@ public class MainActivity extends Activity {
         binding = ActivityMainBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
-        this.buslist = (TextView) findViewById(R.id.buslist);
+        recyclerView = findViewById(R.id.wearableRecyclerView);
+        recyclerView.setHasFixedSize(true);
+        recyclerView.setEdgeItemsCenteringEnabled(true);
+        recyclerView.setLayoutManager(new WearableLinearLayoutManager(this));
+        adapter = new StopAdapter();
+
         this.txtLocation = (TextView) findViewById(R.id.txtLocation);
         this.button = (Button) findViewById(R.id.button);
 
@@ -75,13 +85,97 @@ public class MainActivity extends Activity {
             public void onClick(View view) {
 
                 txtLocation.setText(String.format("%s : %s", wayLatitude, wayLongitude));
-                Intent intent = new Intent(MainActivity.this,StopListActivity.class);
-                intent.putExtra("latitude", wayLatitude);
-                intent.putExtra("longitude", wayLongitude);
-                startActivity(intent);
+                TagoThread tagoThread = new TagoThread();
+                tagoThread.start();
+//                Intent intent = new Intent(MainActivity.this,StopListActivity.class);
+//                intent.putExtra("latitude", wayLatitude);
+//                intent.putExtra("longitude", wayLongitude);
+//                startActivity(intent);
             }
         });
     }//onCreate
+
+    class TagoThread extends Thread{
+        public void run(){
+            String lat_str = Double.toString(wayLatitude);
+            String lon_str = Double.toString(wayLongitude);
+            StringBuffer buffer = new StringBuffer();
+
+            String queryUrl = "http://apis.data.go.kr/1613000/BusSttnInfoInqireService/getCrdntPrxmtSttnList?serviceKey="
+                    + "%2BaCrLa%2Fp1lfYP3wx954IxePqBKnfeZ8EC0pcOupGbRWhxUuOf5HW52ieQEZojO%2FEXE0ES1My6X68c50H4dWVLw%3D%3D"
+                    + "&numOfRows=10&pageNo=1&_type=xml"
+                    + "&gpsLati=" + lat_str + "&gpsLong=" + lon_str;
+            try {
+                URL url = new URL(queryUrl);//문자열로 된 요청 url을 URL 객체로 생성.
+                InputStream is = url.openStream(); //url위치로 입력스트림 연결
+
+                XmlPullParserFactory factory = XmlPullParserFactory.newInstance();
+                XmlPullParser xpp = factory.newPullParser();
+                xpp.setInput(new InputStreamReader(is, "UTF-8")); //inputstream 으로부터 xml 입력받기
+                String tag;
+                xpp.next();
+                int eventType = xpp.getEventType();
+                while (eventType != XmlPullParser.END_DOCUMENT) {
+                    switch (eventType) {
+                        case XmlPullParser.START_DOCUMENT:
+                            buffer.append("파싱 시작...\n\n");
+                            break;
+
+                        case XmlPullParser.START_TAG:
+                            tag = xpp.getName();//테그 이름 얻어오기
+
+                            if (tag.equals("item")) ;// 첫번째 검색결과
+                            else if (tag.equals("nodeid")) {
+                                //buffer.append("nodeid :");
+                                xpp.next();
+
+                                //Log.d("ID",xpp.getText());
+                                buffer.append(xpp.getText());//description 요소의 TEXT 읽어와서 문자열버퍼에 추가
+                                buffer.append(",");//줄바꿈 문자 추가
+                            } else if (tag.equals("nodenm")) {
+                                //buffer.append("nodenm :");
+                                xpp.next();
+
+                                //Log.d("NM",xpp.getText());
+                                buffer.append(xpp.getText());//telephone 요소의 TEXT 읽어와서 문자열버퍼에 추가
+                                //buffer.append("\n");//줄바꿈 문자 추가
+                            }
+                            break;
+
+                        case XmlPullParser.TEXT:
+                            break;
+
+                        case XmlPullParser.END_TAG:
+                            tag = xpp.getName(); //테그 이름 얻어오기
+                            if (tag.equals("item")) buffer.append(",");// 첫번째 검색결과종료..줄바꿈
+                            break;
+                    }
+                    eventType = xpp.next();
+                }
+            } catch (Exception e) {
+                // TODO Auto-generated catch blocke.printStackTrace();
+            }
+            //buffer.append("파싱 끝\n");
+
+            Log.d("data",buffer.toString());
+            data = buffer.toString();
+            StringTokenizer st = new StringTokenizer(data,",");
+            while(st.hasMoreTokens()){
+                String id = st.nextToken();
+                String nm = st.nextToken();
+                adapter.addItem(new BusStop(id,nm));
+            }
+            //return buffer.toString();//StringBuffer 문자열 객체 반환
+            handler.post(new Runnable() {
+                @Override
+                public void run() {
+                    recyclerView.setAdapter(adapter);
+                }
+            });
+
+        }
+    }
+
 
     private LocationCallback locationCallback = new LocationCallback() {
         @Override

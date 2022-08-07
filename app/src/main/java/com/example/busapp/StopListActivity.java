@@ -43,18 +43,18 @@ public class StopListActivity extends Activity {
         binding = ActivityStopListBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
-        recyclerView = findViewById(R.id.recyclerView);
-        recyclerView.setHasFixedSize(true);
-        recyclerView.setEdgeItemsCenteringEnabled(true);
-        recyclerView.setLayoutManager(new WearableLinearLayoutManager(this));
-
-        adapter = new StopAdapter();
-
-        Intent intent =getIntent();
-        latitude = intent.getDoubleExtra("latitude", 0);
-        longitude = intent.getDoubleExtra("longitude", 0);
-        TagoThread tagoThread = new TagoThread();
-        tagoThread.start();
+//        recyclerView = findViewById(R.id.recyclerView);
+//        recyclerView.setHasFixedSize(true);
+//        recyclerView.setEdgeItemsCenteringEnabled(true);
+//        recyclerView.setLayoutManager(new WearableLinearLayoutManager(this));
+//
+//        adapter = new StopAdapter();
+//
+//        Intent intent =getIntent();
+//        latitude = intent.getDoubleExtra("latitude", 0);
+//        longitude = intent.getDoubleExtra("longitude", 0);
+//        TagoThread tagoThread = new TagoThread();
+//        tagoThread.start();
 //        data = getTagoXmlData();
         //Log.d("data",data);
 
