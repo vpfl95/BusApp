@@ -22,6 +22,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.StringTokenizer;
 
 public class StopListActivity extends Activity {
 
@@ -32,34 +33,36 @@ public class StopListActivity extends Activity {
     private double latitude;
     private double longitude;
     private TagoThread tagoThread;
-
+    private StopAdapter adapter;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
         binding = ActivityStopListBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
-        //mTextView = binding.text;
 
         WearableRecyclerView recyclerView = findViewById(R.id.recyclerView);
         recyclerView.setHasFixedSize(true);
         recyclerView.setEdgeItemsCenteringEnabled(true);
         recyclerView.setLayoutManager(new WearableLinearLayoutManager(this));
 
-        StopAdapter adapter = new StopAdapter();
-        adapter.addItem(new BusStop("asdfsdf","aasdf231231"));
-        adapter.addItem(new BusStop("qwrqwer","qweqwe231"));
-        adapter.addItem(new BusStop("qwrqwer","qweqwe231"));
-        adapter.addItem(new BusStop("qwrqwer","qweqwe231"));
-        recyclerView.setAdapter(adapter);
+        adapter = new StopAdapter();
+
         Intent intent =getIntent();
         latitude = intent.getDoubleExtra("latitude", 0);
         longitude = intent.getDoubleExtra("longitude", 0);
         data = getTagoXmlData();
-        Log.d("data",data);
+        //Log.d("data",data);
 
-        //adapter = getTagoXmlData();
-        //recyclerView.setAdapter(adapter);
+        StringTokenizer st = new StringTokenizer(data,",");
+        while(st.hasMoreTokens()){
+            String id = st.nextToken();
+            String nm = st.nextToken();
+            adapter.addItem(new BusStop(id,nm));
+        }
+
+        recyclerView.setAdapter(adapter);
+
     }
 
 
@@ -94,34 +97,20 @@ public class StopListActivity extends Activity {
                             tag = xpp.getName();//테그 이름 얻어오기
 
                             if (tag.equals("item")) ;// 첫번째 검색결과
-                            else if (tag.equals("gpslati")) {
-                                buffer.append("lat : ");
-                                xpp.next();
-                                buffer.append(xpp.getText());//title 요소의 TEXT 읽어와서 문자열버퍼에 추가
-                                buffer.append("\n"); //줄바꿈 문자 추가
-                            } else if (tag.equals("gpslong")) {
-                                buffer.append("long : ");
-                                xpp.next();
-                                buffer.append(xpp.getText());//category 요소의 TEXT 읽어와서 문자열버퍼에 추가
-                                buffer.append("\n");//줄바꿈 문자 추가
-                            } else if (tag.equals("nodeid")) {
-                                buffer.append("nodeid :");
+                            else if (tag.equals("nodeid")) {
+                                //buffer.append("nodeid :");
                                 xpp.next();
 
-
+                                //Log.d("ID",xpp.getText());
                                 buffer.append(xpp.getText());//description 요소의 TEXT 읽어와서 문자열버퍼에 추가
-                                buffer.append("\n");//줄바꿈 문자 추가
+                                buffer.append(",");//줄바꿈 문자 추가
                             } else if (tag.equals("nodenm")) {
-                                buffer.append("nodenm :");
+                                //buffer.append("nodenm :");
                                 xpp.next();
 
+                                //Log.d("NM",xpp.getText());
                                 buffer.append(xpp.getText());//telephone 요소의 TEXT 읽어와서 문자열버퍼에 추가
-                                buffer.append("\n");//줄바꿈 문자 추가
-                            } else if (tag.equals("nodeno")) {
-                                buffer.append("nodeno :");
-                                xpp.next();
-                                buffer.append(xpp.getText());//address 요소의 TEXT 읽어와서 문자열버퍼에 추가
-                                buffer.append("\n");//줄바꿈 문자 추가
+                                //buffer.append("\n");//줄바꿈 문자 추가
                             }
                             break;
 
@@ -130,8 +119,7 @@ public class StopListActivity extends Activity {
 
                         case XmlPullParser.END_TAG:
                             tag = xpp.getName(); //테그 이름 얻어오기
-
-                            if (tag.equals("item")) buffer.append("\n");// 첫번째 검색결과종료..줄바꿈
+                            if (tag.equals("item")) buffer.append(",");// 첫번째 검색결과종료..줄바꿈
                             break;
                     }
                     eventType = xpp.next();
@@ -148,7 +136,6 @@ public class StopListActivity extends Activity {
             e.printStackTrace();
         }
         return buffer.toString();//StringBuffer 문자열 객체 반환
-        //return adapter;
     }
 
 }
