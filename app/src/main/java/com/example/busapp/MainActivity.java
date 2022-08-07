@@ -10,7 +10,9 @@ import android.location.Location;
 import android.os.Bundle;
 import android.os.Handler;
 import android.util.Log;
+import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewConfiguration;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
@@ -18,6 +20,9 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
+import androidx.core.view.InputDeviceCompat;
+import androidx.core.view.MotionEventCompat;
+import androidx.core.view.ViewConfigurationCompat;
 import androidx.wear.widget.WearableLinearLayoutManager;
 import androidx.wear.widget.WearableRecyclerView;
 
@@ -72,6 +77,23 @@ public class MainActivity extends Activity {
         recyclerView.setEdgeItemsCenteringEnabled(true);
         recyclerView.setLayoutManager(new WearableLinearLayoutManager(this));
         adapter = new StopAdapter();
+
+        recyclerView.setOnGenericMotionListener(new View.OnGenericMotionListener() {
+            @Override
+            public boolean onGenericMotion(View view, MotionEvent motionEvent) {
+                if(motionEvent.getAction()==MotionEvent.ACTION_SCROLL &&
+                motionEvent.isFromSource(InputDeviceCompat.SOURCE_ROTARY_ENCODER)
+                ){
+                    float delta = -motionEvent.getAxisValue(MotionEventCompat.AXIS_SCROLL) *
+                            ViewConfigurationCompat.getScaledVerticalScrollFactor(
+                                    ViewConfiguration.get(view.getContext()),view.getContext()
+                            );
+                    view.scrollBy(0,Math.round(delta));
+                    return true;
+                }
+                return false;
+            }
+        });
 
         this.txtLocation = (TextView) findViewById(R.id.txtLocation);
         this.button = (Button) findViewById(R.id.button);
