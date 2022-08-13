@@ -4,9 +4,6 @@ public class BusStop {
     private String nodeName;
     private String nodeId;
 
-    public BusStop(){
-
-    }
     public BusStop(String nodeName, String nodeId){
         this.nodeName = nodeName;
         this.nodeId = nodeId;

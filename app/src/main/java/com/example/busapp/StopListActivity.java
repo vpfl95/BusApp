@@ -81,6 +81,14 @@ public class StopListActivity extends Activity {
         TagoThread tagoThread = new TagoThread();
         tagoThread.start();
 
+        adapter.setOnItemClickListener(new OnStopItemClickListener() {
+            @Override
+            public void onItemClick(StopAdapter.ViewHolder holder, View view, int position) {
+                BusStop item = adapter.getItem(position);
+                Toast.makeText(getApplicationContext(),item.getNodeId() + item.getNodeName(),Toast.LENGTH_LONG).show();
+            }
+        });
+
     }
 
     class TagoThread extends Thread{
@@ -164,6 +172,7 @@ public class StopListActivity extends Activity {
         }
     }
 
+//Create a curved layout
     public class CustomScrollingLayoutCallback extends WearableLinearLayoutManager.LayoutCallback {
         /** How much should we scale the icon at most. */
         private static final float MAX_ICON_PROGRESS = 0.65f;
