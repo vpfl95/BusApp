@@ -29,6 +29,11 @@ public class StopAdapter extends RecyclerView.Adapter<StopAdapter.ViewHolder>
         holder.setItem(item);
     }
 
+    @Override
+    public int getItemCount() {
+        return items.size();
+    }
+
     public void addItem(BusStop item){
         items.add(item);
     }
@@ -46,10 +51,7 @@ public class StopAdapter extends RecyclerView.Adapter<StopAdapter.ViewHolder>
     }
 
 
-    @Override
-    public int getItemCount() {
-        return items.size();
-    }
+
 
     public void setOnItemClickListener(OnStopItemClickListener listener){
         this.listener = listener;
@@ -84,7 +86,7 @@ public class StopAdapter extends RecyclerView.Adapter<StopAdapter.ViewHolder>
 
         public void setItem(BusStop item){
             textView.setText(item.getNodeName());
-            textView2.setText(item.getNodeId());
+            textView2.setText(item.getNodeNo());
         }
 
     }

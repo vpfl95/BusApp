@@ -27,6 +27,7 @@ import org.xmlpull.v1.XmlPullParserFactory;
 
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.StringTokenizer;
@@ -35,7 +36,7 @@ public class StopListActivity extends Activity {
 
     private TextView mTextView;
     private ActivityStopListBinding binding;
-
+    private TextView textView4;
     private String data;
     private double latitude;
     private double longitude;
@@ -47,7 +48,8 @@ public class StopListActivity extends Activity {
         super.onCreate(savedInstanceState);
 
         binding = ActivityStopListBinding.inflate(getLayoutInflater());
-        setContentView(binding.getRoot());
+        //setContentView(binding.getRoot());
+        setContentView(R.layout.activity_stop_list);
         CustomScrollingLayoutCallback customScrollingLayoutCallback = new CustomScrollingLayoutCallback();
 
         recyclerView = findViewById(R.id.recyclerView);
@@ -85,6 +87,10 @@ public class StopListActivity extends Activity {
             @Override
             public void onItemClick(StopAdapter.ViewHolder holder, View view, int position) {
                 BusStop item = adapter.getItem(position);
+                Intent intent = new Intent(StopListActivity.this, BusListActivity.class);
+                intent.putExtra("nodeId", item.getNodeId());
+                intent.putExtra("nodeName", item.getNodeName());
+                startActivity(intent);
                 Toast.makeText(getApplicationContext(),item.getNodeId() + item.getNodeName(),Toast.LENGTH_LONG).show();
             }
         });
@@ -96,14 +102,17 @@ public class StopListActivity extends Activity {
             String lat_str = Double.toString(latitude);
             String lon_str = Double.toString(longitude);
             StringBuffer buffer = new StringBuffer();
-            
+
             String queryUrl = "http://apis.data.go.kr/1613000/BusSttnInfoInqireService/getCrdntPrxmtSttnList?serviceKey="
                     + "%2BaCrLa%2Fp1lfYP3wx954IxePqBKnfeZ8EC0pcOupGbRWhxUuOf5HW52ieQEZojO%2FEXE0ES1My6X68c50H4dWVLw%3D%3D"
                     + "&numOfRows=10&pageNo=1&_type=xml"
                     + "&gpsLati=" + lat_str + "&gpsLong=" + lon_str;
             try {
                 URL url = new URL(queryUrl);//문자열로 된 요청 url을 URL 객체로 생성.
-                InputStream is = url.openStream(); //url위치로 입력스트림 연결
+                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                //URLConnection urlConnection = url.openConnection();
+                InputStream is = conn.getInputStream();
+                //InputStream is = url.openStream(); //url위치로 입력스트림 연결
 
                 XmlPullParserFactory factory = XmlPullParserFactory.newInstance();
                 XmlPullParser xpp = factory.newPullParser();
@@ -131,10 +140,15 @@ public class StopListActivity extends Activity {
                             } else if (tag.equals("nodenm")) {
                                 //buffer.append("nodenm :");
                                 xpp.next();
-
                                 //Log.d("NM",xpp.getText());
                                 buffer.append(xpp.getText());//telephone 요소의 TEXT 읽어와서 문자열버퍼에 추가
-                                //buffer.append("\n");//줄바꿈 문자 추가
+                                buffer.append(",");//줄바꿈 문자 추가
+                            }else if (tag.equals("nodeno")) {
+                                //buffer.append("nodenm :");
+                                xpp.next();
+                                //Log.d("NM",xpp.getText());
+                                buffer.append(xpp.getText());//telephone 요소의 TEXT 읽어와서 문자열버퍼에 추가
+                                //buffer.append(",");//줄바꿈 문자 추가
                             }
                             break;
 
@@ -159,7 +173,10 @@ public class StopListActivity extends Activity {
             while(st.hasMoreTokens()){
                 String id = st.nextToken();
                 String nm = st.nextToken();
-                adapter.addItem(new BusStop(id,nm));
+                String no = st.nextToken();
+                Log.d("id",id);
+                Log.d("nm",nm);
+                adapter.addItem(new BusStop(id,nm,no));
             }
             //return buffer.toString();//StringBuffer 문자열 객체 반환
             handler.post(new Runnable() {
